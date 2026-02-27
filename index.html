@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Study Tool</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐍 Python Study Tool</h1>
+            <div class="toolbar">
+                <button id="btn-annotate" title="Adicionar anotação ao trecho selecionado">➕ Anotar</button>
+                <button id="btn-export" title="Exportar projeto como JSON">📤 Exportar</button>
+                <button id="btn-import" title="Importar projeto de um arquivo JSON">📥 Importar</button>
+            </div>
+        </header>
+        <main>
+            <textarea id="code-editor"></textarea>
+        </main>
+    </div>
+
+    <!-- Popup para exibir anotação -->
+    <div id="popup" class="popup hidden">
+        <div class="popup-content">
+            <span id="popup-text"></span>
+            <div class="popup-actions">
+                <button id="popup-edit" title="Editar anotação">✏️</button>
+                <button id="popup-delete" title="Remover anotação">✖</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel para nova anotação -->
+    <div id="new-annotation-panel" class="new-annotation-panel hidden">
+        <textarea id="new-annotation-text" placeholder="Digite sua anotação..."></textarea>
+        <div class="panel-actions">
+            <button id="save-annotation">Salvar</button>
+            <button id="cancel-annotation">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Painel para editar anotação -->
+    <div id="edit-annotation-panel" class="new-annotation-panel hidden">
+        <textarea id="edit-annotation-text" placeholder="Edite sua anotação..."></textarea>
+        <div class="panel-actions">
+            <button id="save-edit-annotation">Salvar</button>
+            <button id="cancel-edit-annotation">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Input file oculto para importar -->
+    <input type="file" id="import-file" accept=".json" style="display: none;">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #f5f5f5;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+header {
+    background: white;
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #2c3e50;
+}
+
+.toolbar button {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    margin-left: 0.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    color: #2c3e50;
+}
+
+.toolbar button:hover {
+    background: #f0f0f0;
+    border-color: #999;
+}
+
+main {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+main .CodeMirror {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
+#code-editor {
+    height: 100%;
+    width: 100%;
+    display: none; /* Textarea original é substituída pelo CodeMirror */
+}
+
+.CodeMirror {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.CodeMirror-scroll {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.CodeMirror-sizer {
+    min-height: 100% !important;
+}
+
+.CodeMirror-gutters {
+    min-height: 100% !important;
+}
+
+/* Destaque para trechos anotados */
+.cm-mark {
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Cores para diferentes anotações */
+.cm-mark-color-0 {
+    background-color: #fff9c4 !important; /* Amarelo suave */
+}
+
+.cm-mark-color-1 {
+    background-color: #ffcccb !important; /* Vermelho suave */
+}
+
+.cm-mark-color-2 {
+    background-color: #c8e6c9 !important; /* Verde suave */
+}
+
+.cm-mark-color-3 {
+    background-color: #b3e5fc !important; /* Azul suave */
+}
+
+.cm-mark-color-4 {
+    background-color: #f0bfff !important; /* Roxo suave */
+}
+
+.cm-mark-color-5 {
+    background-color: #ffe082 !important; /* Laranja suave */
+}
+
+.cm-mark-color-6 {
+    background-color: #ffccfd !important; /* Rosa suave */
+}
+
+.cm-mark-color-7 {
+    background-color: #a1d99b !important; /* Verde claro */
+}
+
+.cm-mark-color-8 {
+    background-color: #9ecae1 !important; /* Azul claro */
+}
+
+.cm-mark-color-9 {
+    background-color: #fdd0a2 !important; /* Laranja claro */
+}
+
+/* Popup de anotação */
+.popup {
+    position: absolute;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 0.75rem 1rem;
+    max-width: 300px;
+    word-wrap: break-word;
+    z-index: 1000;
+    border: 1px solid #e0e0e0;
+    font-size: 0.9rem;
+}
+
+.popup.hidden {
+    display: none;
+}
+
+.popup-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+#popup-text {
+    flex: 1;
+    white-space: pre-wrap;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-direction: column;
+}
+
+#popup-edit,
+#popup-delete {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #e74c3c;
+    padding: 0.25rem;
+    line-height: 1;
+}
+
+#popup-edit:hover,
+#popup-delete:hover {
+    color: #c0392b;
+}
+
+/* Painel de nova anotação */
+.new-annotation-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    padding: 1rem;
+    width: 300px;
+    z-index: 1001;
+    border: 1px solid #ddd;
+}
+
+.new-annotation-panel.hidden {
+    display: none;
+}
+
+#new-annotation-text {
+    width: 100%;
+    min-height: 80px;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+
+.panel-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.panel-actions button {
+    padding: 0.4rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.panel-actions button:first-child {
+    background: #2c3e50;
+    color: white;
+    border-color: #2c3e50;
+}
+
+.panel-actions button:first-child:hover {
+    background: #1e2b37;
+}
+
+.panel-actions button:last-child:hover {
+    background: #f0f0f0;
+}
