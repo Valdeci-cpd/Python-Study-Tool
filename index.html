@@ -13,7 +13,6 @@
         <header>
             <h1>🐍 Python Study Tool</h1>
             <div class="toolbar">
-                <button id="btn-annotate" title="Adicionar anotação ao trecho selecionado">➕ Anotar</button>
                 <button id="btn-export" title="Exportar projeto como JSON">📤 Exportar</button>
                 <button id="btn-import" title="Importar projeto de um arquivo JSON">📥 Importar</button>
             </div>
@@ -23,33 +22,22 @@
         </main>
     </div>
 
-    <!-- Popup para exibir anotação -->
-    <div id="popup" class="popup hidden">
-        <div class="popup-content">
-            <span id="popup-text"></span>
-            <div class="popup-actions">
-                <button id="popup-edit" title="Editar anotação">✏️</button>
-                <button id="popup-delete" title="Remover anotação">✖</button>
-            </div>
+    <!-- Context Menu para interação com anotações -->
+    <div id="context-menu" class="context-menu hidden">
+        <div class="context-menu-item" id="menu-add-annotation">
+            ➕ Adicionar Anotação
+        </div>
+        <div class="context-menu-item" id="menu-edit-annotation" style="display: none;">
+            ✏️ Editar Anotação
+        </div>
+        <div class="context-menu-item" id="menu-delete-annotation" style="display: none;">
+            ✖️ Deletar Anotação
         </div>
     </div>
 
-    <!-- Painel para nova anotação -->
-    <div id="new-annotation-panel" class="new-annotation-panel hidden">
-        <textarea id="new-annotation-text" placeholder="Digite sua anotação..."></textarea>
-        <div class="panel-actions">
-            <button id="save-annotation">Salvar</button>
-            <button id="cancel-annotation">Cancelar</button>
-        </div>
-    </div>
-
-    <!-- Painel para editar anotação -->
-    <div id="edit-annotation-panel" class="new-annotation-panel hidden">
-        <textarea id="edit-annotation-text" placeholder="Edite sua anotação..."></textarea>
-        <div class="panel-actions">
-            <button id="save-edit-annotation">Salvar</button>
-            <button id="cancel-edit-annotation">Cancelar</button>
-        </div>
+    <!-- Tooltip para visualizar anotação ao passar mouse -->
+    <div id="annotation-tooltip" class="annotation-tooltip hidden">
+        <div id="tooltip-text"></div>
     </div>
 
     <!-- Input file oculto para importar -->

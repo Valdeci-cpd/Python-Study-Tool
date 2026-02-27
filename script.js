@@ -11,8 +11,6 @@ const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
 // Forçar recalculo de layout após inicialização
 setTimeout(() => {
     editor.refresh();
-    // Log para confirmar que o editor foi inicializado
-    console.log('CodeMirror iniciado com altura:', editor.getWrapperElement().offsetHeight, 'px');
 }, 0);
 
 // Recalcular tamanho do editor quando a janela é redimensionada
@@ -21,103 +19,24 @@ window.addEventListener('resize', () => {
 });
 
 // Estado da aplicação
-let annotations = [];           // { id, from, to, text, colorIndex }
-let nextId = 1;
+let annotations = []; // { id, from, to, text, mark }
 let currentPopupAnnotationId = null;
-
-// Cores disponíveis para as anotações (cicla automaticamente)
-const annotationColors = [
-    '#fff9c4', // Amarelo suave
-    '#ffcccb', // Vermelho suave
-    '#c8e6c9', // Verde suave
-    '#b3e5fc', // Azul suave
-    '#f0bfff', // Roxo suave
-    '#ffe082', // Laranja suave
-    '#ffccfd', // Rosa suave
-    '#a1d99b', // Verde claro
-    '#9ecae1', // Azul claro
-    '#fdd0a2'  // Laranja claro
-];
+let currentSelection = null;
 
 // Elementos DOM
-const btnAnnotate = document.getElementById('btn-annotate');
 const btnExport = document.getElementById('btn-export');
 const btnImport = document.getElementById('btn-import');
 const importFile = document.getElementById('import-file');
-const popup = document.getElementById('popup');
-const popupText = document.getElementById('popup-text');
-const popupEdit = document.getElementById('popup-edit');
-const popupDelete = document.getElementById('popup-delete');
-const newPanel = document.getElementById('new-annotation-panel');
-const newText = document.getElementById('new-annotation-text');
-const saveBtn = document.getElementById('save-annotation');
-const cancelBtn = document.getElementById('cancel-annotation');
-const editPanel = document.getElementById('edit-annotation-panel');
-const editText = document.getElementById('edit-annotation-text');
-const saveEditBtn = document.getElementById('save-edit-annotation');
-const cancelEditBtn = document.getElementById('cancel-edit-annotation');
+const contextMenu = document.getElementById('context-menu');
+const menuAddAnnotation = document.getElementById('menu-add-annotation');
+const menuEditAnnotation = document.getElementById('menu-edit-annotation');
+const menuDeleteAnnotation = document.getElementById('menu-delete-annotation');
+const tooltip = document.getElementById('annotation-tooltip');
+const tooltipText = document.getElementById('tooltip-text');
 
-// Utilitário para gerar ID simples
+// Utilitário para gerar ID
 function generateId() {
     return Date.now() + Math.floor(Math.random() * 1000);
-}
-
-// Função para criar uma marcação no editor
-function createMark(annotation) {
-    // Obter a classe de cor baseado no índice
-    const colorClass = `cm-mark-color-${annotation.colorIndex}`;
-    const mark = editor.markText(
-        annotation.from,
-        annotation.to,
-        { className: `cm-mark ${colorClass}`, attributes: { 'data-id': annotation.id } }
-    );
-    // Armazenar referência da marcação na anotação (para remoção)
-    annotation.mark = mark;
-}
-
-// Atualizar todas as marcações (após import, por exemplo)
-function renderAllMarks() {
-    // Limpar todas as marcações existentes
-    editor.getAllMarks().forEach(mark => mark.clear());
-    // Recriar a partir do array
-    annotations.forEach(ann => createMark(ann));
-}
-
-// Adicionar nova anotação
-function addAnnotation(from, to, text) {
-    const id = generateId();
-    // Atribuir a próxima cor da lista (cicla entre as cores disponíveis)
-    const colorIndex = annotations.length % annotationColors.length;
-    const annotation = { id, from, to, text, colorIndex };
-    annotations.push(annotation);
-    createMark(annotation);
-}
-
-// Remover anotação pelo ID
-function removeAnnotationById(id) {
-    const index = annotations.findIndex(ann => ann.id === id);
-    if (index !== -1) {
-        const ann = annotations[index];
-        if (ann.mark) ann.mark.clear();
-        annotations.splice(index, 1);
-        // Recalcular os índices de cores para as anotações restantes
-        recolorAnnotations();
-    }
-    if (currentPopupAnnotationId === id) {
-        hidePopup();
-    }
-}
-
-// Recalcular índices de cores
-function recolorAnnotations() {
-    annotations.forEach((ann, index) => {
-        ann.colorIndex = index % annotationColors.length;
-        // Se a marcação já existe, atualizar a classe CSS
-        if (ann.mark) {
-            ann.mark.clear();
-            createMark(ann);
-        }
-    });
 }
 
 // Encontrar anotação por ID
@@ -125,163 +44,231 @@ function findAnnotationById(id) {
     return annotations.find(ann => ann.id === id);
 }
 
-// Mostrar popup com anotação
-function showPopup(annotation, mouseEvent) {
-    popupText.textContent = annotation.text;
-    currentPopupAnnotationId = annotation.id;
-
-    // Posicionar próximo ao mouse
-    const x = mouseEvent.pageX + 15;
-    const y = mouseEvent.pageY + 15;
-    popup.style.left = x + 'px';
-    popup.style.top = y + 'px';
-    popup.classList.remove('hidden');
+// Encontrar anotação na posição do cursor
+function findAnnotationAtCursor(pos) {
+    return annotations.find(ann => {
+        const from = ann.from;
+        const to = ann.to;
+        return (pos.line > from.line || (pos.line === from.line && pos.ch >= from.ch)) &&
+               (pos.line < to.line || (pos.line === to.line && pos.ch <= to.ch));
+    });
 }
 
-function hidePopup() {
-    popup.classList.add('hidden');
-    currentPopupAnnotationId = null;
+// Criar marcação no editor
+function createMark(annotation) {
+    const mark = editor.markText(
+        annotation.from,
+        annotation.to,
+        { className: 'cm-mark', attributes: { 'data-id': annotation.id } }
+    );
+    annotation.mark = mark;
 }
 
-// Mostrar painel de edição de anotação
-function showEditPanel(annotation) {
-    editText.value = annotation.text;
-    editPanel.classList.remove('hidden');
-    editText.focus();
-    hidePopup();
+// Renderizar todas as marcações
+function renderAllMarks() {
+    editor.getAllMarks().forEach(mark => mark.clear());
+    annotations.forEach(ann => createMark(ann));
 }
 
-// Salvar edição de anotação
-function saveAnnotationEdit(id, newText) {
+// Adicionar anotação
+function addAnnotation(from, to, text) {
+    const id = generateId();
+    const annotation = { id, from, to, text };
+    annotations.push(annotation);
+    createMark(annotation);
+}
+
+// Remover anotação
+function removeAnnotationById(id) {
+    const index = annotations.findIndex(ann => ann.id === id);
+    if (index !== -1) {
+        const ann = annotations[index];
+        if (ann.mark) ann.mark.clear();
+        annotations.splice(index, 1);
+    }
+}
+
+// Editar anotação
+function updateAnnotationText(id, newText) {
     const annotation = findAnnotationById(id);
     if (annotation) {
         annotation.text = newText;
-        editPanel.classList.add('hidden');
     }
 }
 
-// Evento de clique no editor para capturar cliques em marcações
-editor.getWrapperElement().addEventListener('mousedown', (e) => {
-    // Verify that both panels are hidden before proceeding
-    if (!newPanel.classList.contains('hidden') || !editPanel.classList.contains('hidden')) {
-        return;
+// Mostrar context menu
+function showContextMenu(event, selectionData) {
+    event.preventDefault();
+
+    // Fechar tooltip ao abrir context menu
+    hideTooltip();
+
+    const x = event.pageX;
+    const y = event.pageY;
+
+    contextMenu.style.left = x + 'px';
+    contextMenu.style.top = y + 'px';
+
+    currentSelection = selectionData;
+
+    // Verificar se tem anotação na seleção
+    let hasAnnotation = false;
+    if (selectionData && selectionData.type === 'selection') {
+        // Verificar se a seleção tem anotação
+        const range = editor.getRange(selectionData.from, selectionData.to);
+        const marks = editor.findMarks(selectionData.from, selectionData.to);
+        hasAnnotation = marks.length > 0;
+
+        if (hasAnnotation) {
+            currentPopupAnnotationId = marks[0].attributes['data-id'];
+        }
+    } else if (selectionData && selectionData.type === 'mark') {
+        hasAnnotation = true;
+        currentPopupAnnotationId = selectionData.id;
     }
-    // Verifica se clicou em um elemento com a classe cm-mark
-    const target = e.target.closest('.cm-mark');
-    if (target) {
-        // Extrai o id do atributo data-id
-        const markId = target.getAttribute('data-id');
-        if (markId) {
-            const id = parseInt(markId, 10);
-            const annotation = findAnnotationById(id);
-            if (annotation) {
-                e.preventDefault(); // evita perda de seleção
-                showPopup(annotation, e);
-            }
+
+    // Mostrar/esconder itens do menu
+    menuAddAnnotation.style.display = hasAnnotation ? 'none' : 'block';
+    menuEditAnnotation.style.display = hasAnnotation ? 'block' : 'none';
+    menuDeleteAnnotation.style.display = hasAnnotation ? 'block' : 'none';
+
+    contextMenu.classList.remove('hidden');
+}
+
+// Esconder context menu
+function hideContextMenu() {
+    contextMenu.classList.add('hidden');
+}
+
+// Mostrar tooltip
+function showTooltip(annotation, event) {
+    if (event) {
+        const x = event.pageX + 10;
+        const y = event.pageY + 10;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+    }
+    tooltipText.textContent = annotation.text;
+    tooltip.classList.remove('hidden');
+}
+
+// Esconder tooltip
+function hideTooltip() {
+    tooltip.classList.add('hidden');
+    tooltipText.textContent = '';
+}
+
+// Abrir input para nova anotação
+function promptForAnnotation(callback) {
+    const text = prompt('Digite sua anotação:');
+    if (text && text.trim()) {
+        callback(text.trim());
+    }
+}
+
+// Abrir input para editar anotação
+function promptToEditAnnotation(annotation, callback) {
+    const text = prompt('Edite sua anotação:', annotation.text);
+    if (text !== null && text.trim()) {
+        callback(text.trim());
+    }
+}
+
+// =======================
+// Event Listeners
+// =======================
+
+// Context menu - Botão direito no editor
+editor.getWrapperElement().addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+
+    const coords = editor.coordsChar({ left: event.pageX, top: event.pageY });
+
+    // Verificar se clicou numa anotação
+    const markAtCursor = editor.findMarks(coords, coords).find(m => m.className === 'cm-mark');
+
+    if (markAtCursor) {
+        // Clicou numa anotação
+        const dataId = markAtCursor.attributes['data-id'];
+        const annotation = findAnnotationById(parseInt(dataId));
+        if (annotation) {
+            showContextMenu(event, { type: 'mark', id: annotation.id });
         }
     } else {
-        // Clicou fora de uma marcação: esconder popup
-        hidePopup();
+        // Verificar se tem seleção
+        const selection = editor.getSelection();
+        if (selection) {
+            const from = editor.getCursor('from');
+            const to = editor.getCursor('to');
+            showContextMenu(event, { type: 'selection', from, to });
+        }
     }
 });
 
-// Clique no botão deletar do popup
-popupDelete.addEventListener('click', () => {
-    if (currentPopupAnnotationId) {
-        removeAnnotationById(currentPopupAnnotationId);
-        hidePopup();
+// Opção: Adicionar Anotação
+menuAddAnnotation.addEventListener('click', () => {
+    if (currentSelection && currentSelection.type === 'selection') {
+        promptForAnnotation((text) => {
+            addAnnotation(currentSelection.from, currentSelection.to, text);
+            hideContextMenu();
+        });
     }
 });
 
-// Clique no botão editar do popup
-popupEdit.addEventListener('click', () => {
-    if (currentPopupAnnotationId) {
-        const annotation = findAnnotationById(currentPopupAnnotationId);
+// Opção: Editar Anotação
+menuEditAnnotation.addEventListener('click', () => {
+    const annotation = findAnnotationById(currentPopupAnnotationId);
+    if (annotation) {
+        promptToEditAnnotation(annotation, (text) => {
+            updateAnnotationText(annotation.id, text);
+            hideContextMenu();
+        });
+    }
+});
+
+// Opção: Deletar Anotação
+menuDeleteAnnotation.addEventListener('click', () => {
+    removeAnnotationById(currentPopupAnnotationId);
+    hideContextMenu();
+});
+
+// Fechar context menu ao clicar fora
+document.addEventListener('click', (event) => {
+    if (!contextMenu.contains(event.target)) {
+        hideContextMenu();
+    }
+});
+
+// Hover nas anotações para mostrar tooltip
+editor.getWrapperElement().addEventListener('mousemove', (event) => {
+    const coords = editor.coordsChar({ left: event.pageX, top: event.pageY });
+    const marks = editor.findMarks(coords, coords);
+    const markAtCursor = marks.find(m => m.className === 'cm-mark');
+
+    if (markAtCursor) {
+        const dataId = markAtCursor.attributes['data-id'];
+        const annotation = findAnnotationById(parseInt(dataId));
         if (annotation) {
-            showEditPanel(annotation);
+            showTooltip(annotation, event);
         }
+    } else {
+        hideTooltip();
     }
 });
 
-// Fechar popup se clicar fora (já tratado no mousedown geral, mas também em outros lugares)
-document.addEventListener('click', (e) => {
-    if (!popup.contains(e.target) && !e.target.closest('.cm-mark') && !newPanel.contains(e.target) && !editPanel.contains(e.target)) {
-        hidePopup();
-    }
+// Esconder tooltip ao sair do editor
+editor.getWrapperElement().addEventListener('mouseleave', () => {
+    hideTooltip();
 });
 
-// Botão "Anotar"
-btnAnnotate.addEventListener('click', () => {
-    const selection = editor.getSelection();
-    if (!selection) {
-        alert('Selecione um trecho de código primeiro.');
-        return;
-    }
+// =======================
+// Exportar/Importar
+// =======================
 
-    // Obter as posições da seleção
-    const from = editor.getCursor('from');
-    const to = editor.getCursor('to');
-
-    // Mostrar painel de nova anotação
-    newText.value = '';
-    newPanel.classList.remove('hidden');
-    newText.focus();
-
-    // Salvar callback temporário
-    const onSave = () => {
-        const text = newText.value.trim();
-        if (text) {
-            addAnnotation(from, to, text);
-        }
-        newPanel.classList.add('hidden');
-        saveBtn.removeEventListener('click', onSave);
-        cancelBtn.removeEventListener('click', onCancel);
-    };
-
-    const onCancel = () => {
-        newPanel.classList.add('hidden');
-        saveBtn.removeEventListener('click', onSave);
-        cancelBtn.removeEventListener('click', onCancel);
-    };
-
-    saveBtn.addEventListener('click', onSave, { once: true });
-    cancelBtn.addEventListener('click', onCancel, { once: true });
-});
-
-// Salvar edição de anotação
-saveEditBtn.addEventListener('click', () => {
-    if (currentPopupAnnotationId) {
-        const text = editText.value.trim();
-        if (text) {
-            saveAnnotationEdit(currentPopupAnnotationId, text);
-        }
-        editPanel.classList.add('hidden');
-    }
-});
-
-// Cancelar edição de anotação
-cancelEditBtn.addEventListener('click', () => {
-    editPanel.classList.add('hidden');
-});
-
-// Fechar painel de edição se clicar fora
-document.addEventListener('click', (e) => {
-    if (!editPanel.contains(e.target) && !popup.contains(e.target) && !e.target.closest('.cm-mark')) {
-        if (!editPanel.classList.contains('hidden')) {
-            editPanel.classList.add('hidden');
-        }
-    }
-});
-
-// Prevenir que o painel de edição suma ao clicar nele
-editPanel.addEventListener('mousedown', (e) => e.stopPropagation());
-
-// Exportar
 btnExport.addEventListener('click', () => {
     const code = editor.getValue();
-    // Remover referências circulares (mark) antes de serializar
-    const exportAnnotations = annotations.map(({ id, from, to, text, colorIndex }) => ({
-        id, from, to, text, colorIndex
+    const exportAnnotations = annotations.map(({ id, from, to, text }) => ({
+        id, from, to, text
     }));
     const data = {
         code,
@@ -297,13 +284,12 @@ btnExport.addEventListener('click', () => {
     URL.revokeObjectURL(url);
 });
 
-// Importar
 btnImport.addEventListener('click', () => {
     importFile.click();
 });
 
-importFile.addEventListener('change', (e) => {
-    const file = e.target.files[0];
+importFile.addEventListener('change', (event) => {
+    const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -323,19 +309,16 @@ importFile.addEventListener('change', (e) => {
 
             // Restaurar anotações
             data.annotations.forEach(ann => {
-                // Reconstruir com id original e color restrito a índices válidos
                 const annotation = {
                     id: ann.id,
                     from: ann.from,
                     to: ann.to,
-                    text: ann.text,
-                    colorIndex: (ann.colorIndex !== undefined) ? ann.colorIndex : (annotations.length % annotationColors.length)
+                    text: ann.text
                 };
                 annotations.push(annotation);
                 createMark(annotation);
             });
 
-            // Limpar input file
             importFile.value = '';
         } catch (err) {
             alert('Erro ao importar arquivo: ' + err.message);
@@ -344,11 +327,15 @@ importFile.addEventListener('change', (e) => {
     reader.readAsText(file);
 });
 
-// Prevenir que o popup suma imediatamente ao clicar nele
-popup.addEventListener('mousedown', (e) => e.stopPropagation());
+// =======================
+// Código exemplo inicial
+// =======================
 
-// Prevenir que o painel de nova anotação suma imediatamente ao clicar nele
-newPanel.addEventListener('mousedown', (e) => e.stopPropagation());
+editor.setValue(`# Cole seu código Python aqui
 
-// Exemplo inicial (opcional)
-editor.setValue('# Cole seu código Python aqui\n\ndef exemplo():\n    print("Olá, mundo!")\n\nexemplo()\n\n# Selecione um trecho e clique em "Anotar"');
+def exemplo():
+    print("Olá, mundo!")
+
+exemplo()
+
+# Selecione um trecho e clique com botão direito para anotar`);
