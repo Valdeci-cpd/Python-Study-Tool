@@ -21,8 +21,7 @@ Uma ferramenta web minimalista e elegante para estudar código Python com **come
 - 📖 **Documentar**: Crie documentação visual do código
 - 🔄 **Reutilizar**: Salve e carregue seus estudos posteriomente
 
-![Ref](./assets/Python_Study_Tool.gif)
-
+![Python_Study_Tool](https://github.com/user-attachments/assets/573c6aa6-be1f-45d3-8895-c82a07ed7dd7)
 
 ## 📝 Exemplo de Anotação
 
