@@ -1,3 +1,23 @@
+/* ============================================
+   CSS Variables - Paleta ChatGPT Style
+   ============================================ */
+
+:root {
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #f7f7f7;
+    --color-text-primary: #0d0d0d;
+    --color-text-secondary: #565656;
+    --color-border: #d1d5db;
+    --color-hover: #f5f5f5;
+    --color-shadow: rgba(0, 0, 0, 0.1);
+    --color-shadow-sm: rgba(0, 0, 0, 0.05);
+    --color-shadow-md: rgba(0, 0, 0, 0.12);
+}
+
+/* ============================================
+   Reset & Base Styles
+   ============================================ */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -10,7 +30,8 @@ html {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: #f5f5f5;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -23,10 +44,14 @@ body {
     height: 100%;
 }
 
+/* ============================================
+   Header & Toolbar
+   ============================================ */
+
 header {
-    background: white;
-    padding: 1rem 2rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: var(--color-bg-primary);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -34,32 +59,47 @@ header {
 }
 
 h1 {
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: #2c3e50;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.3px;
+}
+
+.toolbar {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .toolbar button {
-    background: none;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
     padding: 0.5rem 1rem;
-    margin-left: 0.5rem;
-    font-size: 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-    color: #2c3e50;
+    transition: all 0.2s ease;
+    color: var(--color-text-primary);
 }
 
 .toolbar button:hover {
-    background: #f0f0f0;
+    background: var(--color-hover);
     border-color: #999;
 }
+
+.toolbar button:active {
+    background: #efefef;
+}
+
+/* ============================================
+   Editor Container
+   ============================================ */
 
 main {
     flex: 1;
     overflow: hidden;
     position: relative;
+    background: var(--color-bg-primary);
 }
 
 main .CodeMirror {
@@ -79,6 +119,7 @@ main .CodeMirror {
 }
 
 .CodeMirror {
+    background: var(--color-bg-primary) !important;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
     font-size: 14px;
     line-height: 1.6;
@@ -95,30 +136,42 @@ main .CodeMirror {
 }
 
 .CodeMirror-gutters {
+    background: var(--color-bg-primary) !important;
+    border-right: 1px solid var(--color-border) !important;
     min-height: 100% !important;
     padding-bottom: 100vh !important;
 }
 
-/* Marcação de anotações - discreto, oculto até hover */
+.CodeMirror-linenumber {
+    color: var(--color-text-secondary) !important;
+}
+
+.CodeMirror-cursor {
+    border-left: 1px solid var(--color-text-primary) !important;
+}
+
+/* ============================================
+   Annotations & Highlights
+   ============================================ */
+
 .cm-mark {
     cursor: pointer;
     text-decoration: underline dotted 1px rgba(0, 0, 0, 0.3);
-    transition: background-color 0.2s;
 }
 
-.cm-mark:hover {
-    background-color: rgba(100, 150, 255, 0.1);
-}
+/* ============================================
+   Context Menu
+   ============================================ */
 
-/* Context Menu */
 .context-menu {
     position: fixed;
-    background: white;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    background: var(--color-bg-primary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--color-shadow-md);
     z-index: 2000;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--color-border);
     min-width: 200px;
+    overflow: hidden;
 }
 
 .context-menu.hidden {
@@ -126,45 +179,115 @@ main .CodeMirror {
 }
 
 .context-menu-item {
-    padding: 0.75rem 1rem;
+    padding: 10px 14px;
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.2s;
-    color: #2c3e50;
-    font-size: 0.95rem;
+    transition: background-color 0.15s ease;
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
 .context-menu-item:hover {
+    background-color: var(--color-hover);
+}
+
+.context-menu-item:active {
     background-color: #f0f0f0;
 }
 
-.context-menu-item:first-child {
-    border-radius: 4px 4px 0 0;
-}
+/* ============================================
+   Tooltip
+   ============================================ */
 
-.context-menu-item:last-child {
-    border-radius: 0 0 4px 4px;
-}
-
-/* Tooltip para visualizar anotação */
 .annotation-tooltip {
     position: fixed;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    border-radius: 4px;
-    padding: 0.75rem 1rem;
-    max-width: 300px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border-radius: 8px;
+    padding: 10px 14px;
+    max-width: 320px;
     word-wrap: break-word;
     z-index: 2001;
-    font-size: 0.9rem;
+    font-size: 13px;
+    line-height: 1.6;
     white-space: pre-wrap;
     pointer-events: none;
+    box-shadow: 0 4px 12px var(--color-shadow-md);
+    border: 1px solid var(--color-border);
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    will-change: auto !important;
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -ms-transition: none !important;
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    -ms-animation: none !important;
 }
 
 .annotation-tooltip.hidden {
-    display: none;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: none !important;
+    animation: none !important;
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -ms-transition: none !important;
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    -ms-animation: none !important;
 }
 
 #tooltip-text {
-    color: white;
+    color: var(--color-text-primary);
+    transition: none !important;
+    animation: none !important;
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -ms-transition: none !important;
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    -ms-animation: none !important;
+}
+
+#tooltip-text * {
+    transition: none !important;
+    animation: none !important;
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -ms-transition: none !important;
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    -ms-animation: none !important;
+}
+
+/* Markdown Styles in Tooltip */
+
+.tooltip-bold {
+    font-weight: 700;
+    color: var(--color-text-primary);
+    letter-spacing: -0.2px;
+}
+
+.tooltip-italic {
+    font-style: italic;
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+
+.tooltip-code {
+    background: var(--color-bg-primary);
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-size: 0.82em;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    letter-spacing: 0.3px;
+    display: inline-block;
 }

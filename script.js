@@ -56,12 +56,57 @@ function findAnnotationAtCursor(pos) {
 
 // Criar marcação no editor
 function createMark(annotation) {
-    const mark = editor.markText(
-        annotation.from,
-        annotation.to,
-        { className: 'cm-mark', attributes: { 'data-id': annotation.id } }
-    );
-    annotation.mark = mark;
+    const marks = [];
+
+    // Se for single-line, cria mark normal
+    if (annotation.from.line === annotation.to.line) {
+        const mark = editor.markText(
+            annotation.from,
+            annotation.to,
+            { className: 'cm-mark', attributes: { 'data-id': annotation.id } }
+        );
+        marks.push(mark);
+    } else {
+        // Para multi-linha, cria um mark por linha começando do primeiro char não-espaço
+        for (let lineNum = annotation.from.line; lineNum <= annotation.to.line; lineNum++) {
+            const lineContent = editor.getLine(lineNum);
+            const firstNonSpace = lineContent.search(/\S/);
+
+            let from, to;
+
+            if (lineNum === annotation.from.line) {
+                // Primeira linha
+                from = {
+                    line: lineNum,
+                    ch: Math.max(annotation.from.ch, firstNonSpace >= 0 ? firstNonSpace : annotation.from.ch)
+                };
+                to = { line: lineNum, ch: lineContent.length };
+            } else if (lineNum === annotation.to.line) {
+                // Última linha
+                from = {
+                    line: lineNum,
+                    ch: firstNonSpace >= 0 ? firstNonSpace : 0
+                };
+                to = annotation.to;
+            } else {
+                // Linhas intermediárias
+                from = {
+                    line: lineNum,
+                    ch: firstNonSpace >= 0 ? firstNonSpace : 0
+                };
+                to = { line: lineNum, ch: lineContent.length };
+            }
+
+            const mark = editor.markText(
+                from,
+                to,
+                { className: 'cm-mark', attributes: { 'data-id': annotation.id } }
+            );
+            marks.push(mark);
+        }
+    }
+
+    annotation.marks = marks;
 }
 
 // Renderizar todas as marcações
@@ -83,7 +128,11 @@ function removeAnnotationById(id) {
     const index = annotations.findIndex(ann => ann.id === id);
     if (index !== -1) {
         const ann = annotations[index];
-        if (ann.mark) ann.mark.clear();
+        if (ann.marks && Array.isArray(ann.marks)) {
+            ann.marks.forEach(mark => mark.clear());
+        } else if (ann.mark) {
+            ann.mark.clear();
+        }
         annotations.splice(index, 1);
     }
 }
@@ -94,6 +143,33 @@ function updateAnnotationText(id, newText) {
     if (annotation) {
         annotation.text = newText;
     }
+}
+
+// Normalizar seleção para evitar espaços em branco em multi-linha
+function normalizeSelection(from, to) {
+    // Se seleção estiver na mesma linha, retorna como está
+    if (from.line === to.line) {
+        return { from, to };
+    }
+
+    // Se é multi-linha, ajusta ambos os extremos para remover indentação
+
+    // Ajusta o início: remove espaços iniciais da primeira linha
+    const firstLineContent = editor.getLine(from.line);
+    const firstNonSpace = firstLineContent.search(/\S/); // Encontra primeiro caractere não-espaço
+    const adjustedFrom = {
+        line: from.line,
+        ch: firstNonSpace >= 0 ? Math.max(from.ch, firstNonSpace) : from.ch
+    };
+
+    // Ajusta o final: termina no final do conteúdo real da última linha
+    const lastLineContent = editor.getLine(to.line);
+    const adjustedTo = {
+        line: to.line,
+        ch: Math.min(to.ch, lastLineContent.length)
+    };
+
+    return { from: adjustedFrom, to: adjustedTo };
 }
 
 // Mostrar context menu
@@ -140,6 +216,31 @@ function hideContextMenu() {
     contextMenu.classList.add('hidden');
 }
 
+// Renderizar Markdown para HTML
+function renderMarkdown(text) {
+    if (!text) return '';
+
+    let html = text;
+
+    // Escapar caracteres HTML perigosos
+    html = html
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Aplicar markdown em ordem: código, negrito, itálico
+    // Código inline: `texto`
+    html = html.replace(/`([^`]+)`/g, '<span class="tooltip-code">$1</span>');
+
+    // Negrito: **texto**
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<span class="tooltip-bold">$1</span>');
+
+    // Itálico: *texto*
+    html = html.replace(/\*([^*]+)\*/g, '<span class="tooltip-italic">$1</span>');
+
+    return html;
+}
+
 // Mostrar tooltip
 function showTooltip(annotation, event) {
     if (event) {
@@ -148,14 +249,19 @@ function showTooltip(annotation, event) {
         tooltip.style.left = x + 'px';
         tooltip.style.top = y + 'px';
     }
-    tooltipText.textContent = annotation.text;
-    tooltip.classList.remove('hidden');
+    // Renderizar markdown e inserir como HTML
+    const renderedHTML = renderMarkdown(annotation.text);
+    tooltipText.innerHTML = renderedHTML;
+    // Garantir que a classe hidden é removida instantaneamente
+    requestAnimationFrame(() => {
+        tooltip.classList.remove('hidden');
+    });
 }
 
 // Esconder tooltip
 function hideTooltip() {
     tooltip.classList.add('hidden');
-    tooltipText.textContent = '';
+    tooltipText.innerHTML = '';
 }
 
 // Abrir input para nova anotação
@@ -200,7 +306,8 @@ editor.getWrapperElement().addEventListener('contextmenu', (event) => {
         if (selection) {
             const from = editor.getCursor('from');
             const to = editor.getCursor('to');
-            showContextMenu(event, { type: 'selection', from, to });
+            const normalized = normalizeSelection(from, to);
+            showContextMenu(event, { type: 'selection', from: normalized.from, to: normalized.to });
         }
     }
 });
@@ -265,7 +372,8 @@ editor.getWrapperElement().addEventListener('mouseleave', () => {
 // Exportar/Importar
 // =======================
 
-btnExport.addEventListener('click', () => {
+// Exportar projeto (com diálogo "Salvar Como")
+async function exportProject() {
     const code = editor.getValue();
     const exportAnnotations = annotations.map(({ id, from, to, text }) => ({
         id, from, to, text
@@ -275,6 +383,31 @@ btnExport.addEventListener('click', () => {
         annotations: exportAnnotations
     };
     const json = JSON.stringify(data, null, 2);
+
+    // Tentar usar File System Access API (navegadores modernos)
+    if ('showSaveFilePicker' in window) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: 'python-study-export.json',
+                types: [{
+                    description: 'JSON Files',
+                    accept: { 'application/json': ['.json'] }
+                }]
+            });
+
+            const writable = await handle.createWritable();
+            await writable.write(json);
+            await writable.close();
+            return;
+        } catch (err) {
+            // Se o usuário cancelar ou houver erro diferente de AbortError, fazer fallback
+            if (err.name !== 'AbortError') {
+                console.error('Erro ao salvar:', err);
+            }
+        }
+    }
+
+    // Fallback: download automático (navegadores antigos ou se API falhar)
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -282,7 +415,9 @@ btnExport.addEventListener('click', () => {
     a.download = 'python-study-export.json';
     a.click();
     URL.revokeObjectURL(url);
-});
+}
+
+btnExport.addEventListener('click', exportProject);
 
 btnImport.addEventListener('click', () => {
     importFile.click();
